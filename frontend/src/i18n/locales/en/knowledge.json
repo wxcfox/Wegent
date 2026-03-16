@@ -96,6 +96,7 @@
       "reindexSuccess": "Reindex started",
       "reindexFailed": "Failed to start reindex",
       "openLink": "Open Link",
+      "download": "Download",
       "columns": {
         "name": "Name",
         "type": "Type",
