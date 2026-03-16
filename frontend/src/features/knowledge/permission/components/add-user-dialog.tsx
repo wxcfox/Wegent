@@ -45,14 +45,16 @@ export function AddUserDialog({ open, onOpenChange, kbId, onSuccess }: AddUserDi
       return
     }
 
-    const userName = selectedUsers[0].user_name
-    if (!userName.trim()) {
+    const validUsers = selectedUsers.filter(u => u.user_name.trim())
+    if (validUsers.length === 0) {
       setLocalError(t('document.permission.invalidUserName'))
       return
     }
 
     try {
-      await addPermission(userName, role)
+      for (const user of validUsers) {
+        await addPermission(user.user_name, role)
+      }
       onSuccess?.()
       onOpenChange(false)
       // Reset form
