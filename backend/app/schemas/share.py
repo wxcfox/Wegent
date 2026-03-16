@@ -14,6 +14,9 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# Maximum number of members that can be added in a single batch request
+MAX_BATCH_SIZE: int = 10
+
 from app.models.share_link import PermissionLevel, ResourceType
 
 
@@ -155,6 +158,14 @@ class ResourceMemberCreate(BaseModel):
     )
 
 
+class BatchResourceMemberCreate(BaseModel):
+    """Request body for batch adding members directly."""
+
+    members: List[ResourceMemberCreate] = Field(
+        description="List of members to add", min_length=1, max_length=MAX_BATCH_SIZE
+    )
+
+
 class ResourceMemberUpdate(BaseModel):
     """Request body for updating member permissions."""
 
@@ -188,6 +199,18 @@ class ResourceMemberResponse(BaseModel):
     requested_at: datetime
     created_at: datetime
     updated_at: datetime
+
+
+class BatchResourceMemberResponse(BaseModel):
+    """Response containing batch member addition results."""
+
+    succeeded: List[ResourceMemberResponse] = Field(
+        default_factory=list, description="Successfully added members"
+    )
+    failed: List[dict] = Field(
+        default_factory=list,
+        description="Failed additions with user_id and error message",
+    )
 
 
 class ResourceMemberInDB(BaseModel):

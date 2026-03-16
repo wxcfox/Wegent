@@ -27,6 +27,7 @@ from app.models.resource_member import MemberStatus, ResourceMember, ResourceRol
 from app.models.share_link import PermissionLevel, ResourceType, ShareLink
 from app.models.user import User
 from app.schemas.share import (
+    BatchResourceMemberResponse,
     JoinByLinkResponse,
     MemberListResponse,
 )
@@ -95,6 +96,9 @@ class UnifiedShareService(ABC):
         PermissionLevel.EDIT.value: ResourceRole.DEVELOPER.value,
         PermissionLevel.MANAGE.value: ResourceRole.MAINTAINER.value,
     }
+
+    # Expiry for share links created during direct member addition (effectively permanent)
+    SHARE_LINK_EXPIRY_DAYS: int = 365 * 100
 
     def __init__(self, resource_type: ResourceType):
         """Initialize the share service for a specific resource type."""
@@ -208,6 +212,62 @@ class UnifiedShareService(ABC):
         share_data = f"{self.resource_type.value}#{user_id}#{resource_id}"
         token = self._aes_encrypt(share_data)
         return urllib.parse.quote(token)
+
+    def _get_or_create_share_link(
+        self,
+        db: Session,
+        resource_id: int,
+        current_user_id: int,
+    ) -> ShareLink:
+        """Get an existing active share link or create a new one for a resource.
+
+        This helper is used during direct member addition to ensure every
+        ResourceMember record has a valid share_link_id (required by the DB schema).
+
+        The created share link uses require_approval=True with a near-permanent
+        expiry so it never interferes with normal share-link flows.
+
+        Args:
+            db: Database session
+            resource_id: Resource ID to find or create the share link for
+            current_user_id: User ID of the person performing the action
+
+        Returns:
+            An existing or newly created ShareLink instance
+        """
+        # Handle legacy data: the same KB may be stored as "KnowledgeBase" or
+        # "KNOWLEDGE_BASE" depending on when the record was created.
+        resource_type_variants = [self.resource_type.value]
+        if self.resource_type.value == "KnowledgeBase":
+            resource_type_variants.append("KNOWLEDGE_BASE")
+
+        share_link = (
+            db.query(ShareLink)
+            .filter(
+                ShareLink.resource_type.in_(resource_type_variants),
+                ShareLink.resource_id == resource_id,
+                ShareLink.is_active == True,
+            )
+            .first()
+        )
+
+        if not share_link:
+            share_token = self._generate_share_token(current_user_id, resource_id)
+            share_link = ShareLink(
+                resource_type=self.resource_type.value,
+                resource_id=resource_id,
+                share_token=share_token,
+                require_approval=True,
+                default_permission_level=PermissionLevel.VIEW.value,
+                expires_at=datetime.utcnow()
+                + timedelta(days=self.SHARE_LINK_EXPIRY_DAYS),
+                created_by_user_id=current_user_id,
+                is_active=True,
+            )
+            db.add(share_link)
+            db.flush()
+
+        return share_link
 
     def _decode_share_token(self, share_token: str) -> Optional[Tuple[str, int, int]]:
         """
@@ -344,7 +404,9 @@ class UnifiedShareService(ABC):
                 )
             else:
                 # Set to far future instead of None to avoid NOT NULL constraint
-                existing_link.expires_at = datetime.utcnow() + timedelta(days=365 * 100)
+                existing_link.expires_at = datetime.utcnow() + timedelta(
+                    days=self.SHARE_LINK_EXPIRY_DAYS
+                )
             existing_link.updated_at = datetime.utcnow()
             db.commit()
             db.refresh(existing_link)
@@ -379,7 +441,7 @@ class UnifiedShareService(ABC):
         if config.expires_in_hours:
             expires_at = datetime.utcnow() + timedelta(hours=config.expires_in_hours)
         else:
-            expires_at = datetime.utcnow() + timedelta(days=365 * 100)
+            expires_at = datetime.utcnow() + timedelta(days=self.SHARE_LINK_EXPIRY_DAYS)
 
         # Create new share link
         logger.info(
@@ -871,15 +933,13 @@ class UnifiedShareService(ABC):
         if not target_user:
             raise HTTPException(status_code=404, detail="Target user not found")
 
-        # LOGGING: Log user information to verify email is available in User model
         logger.info(
             f"[add_member] Target user found: user_id={target_user_id}, "
             f"user_name={target_user.user_name}, email={target_user.email}"
         )
 
-        # Check for existing member
-        # Note: Database may store resource_type in different formats (e.g., "KNOWLEDGE_BASE" vs "KnowledgeBase")
-        # We need to check both formats to handle legacy data and prevent duplicate records
+        # Check for existing member.
+        # Note: DB may store resource_type in different formats ("KNOWLEDGE_BASE" vs "KnowledgeBase")
         resource_type_variants = [self.resource_type.value]
         if self.resource_type.value == "KnowledgeBase":
             resource_type_variants.append("KNOWLEDGE_BASE")
@@ -894,43 +954,16 @@ class UnifiedShareService(ABC):
             .first()
         )
 
+        # Obtain (or lazily create) the share link for this resource once.
+        share_link = self._get_or_create_share_link(db, resource_id, current_user_id)
+
         if existing:
-            # Note: Database may store status in different formats (e.g., "APPROVED" vs "approved")
+            # Note: DB may store status in different formats ("APPROVED" vs "approved")
             if existing.status.lower() == MemberStatus.APPROVED.value.lower():
                 raise HTTPException(status_code=400, detail="User already has access")
 
-            # Ensure share_link_id is set (required by database)
+            # Ensure share_link_id is populated on legacy records that lack it
             if not existing.share_link_id:
-                # Note: Database may store resource_type in different formats
-                resource_type_variants = [self.resource_type.value]
-                if self.resource_type.value == "KnowledgeBase":
-                    resource_type_variants.append("KNOWLEDGE_BASE")
-
-                share_link = (
-                    db.query(ShareLink)
-                    .filter(
-                        ShareLink.resource_type.in_(resource_type_variants),
-                        ShareLink.resource_id == resource_id,
-                        ShareLink.is_active == True,
-                    )
-                    .first()
-                )
-                if not share_link:
-                    share_token = self._generate_share_token(
-                        current_user_id, resource_id
-                    )
-                    share_link = ShareLink(
-                        resource_type=self.resource_type.value,
-                        resource_id=resource_id,
-                        share_token=share_token,
-                        require_approval=True,
-                        default_permission_level=PermissionLevel.VIEW.value,
-                        expires_at=datetime.utcnow() + timedelta(days=365 * 100),
-                        created_by_user_id=current_user_id,
-                        is_active=True,
-                    )
-                    db.add(share_link)
-                    db.flush()
                 existing.share_link_id = share_link.id
 
             # Update existing record
@@ -942,39 +975,6 @@ class UnifiedShareService(ABC):
             existing.updated_at = datetime.utcnow()
             member = existing
         else:
-            # Get or create a share link for direct member addition
-            # This is needed because share_link_id may be required in the database
-            # Note: Database may store resource_type in different formats
-            resource_type_variants = [self.resource_type.value]
-            if self.resource_type.value == "KnowledgeBase":
-                resource_type_variants.append("KNOWLEDGE_BASE")
-
-            share_link = (
-                db.query(ShareLink)
-                .filter(
-                    ShareLink.resource_type.in_(resource_type_variants),
-                    ShareLink.resource_id == resource_id,
-                    ShareLink.is_active == True,
-                )
-                .first()
-            )
-
-            # If no share link exists, create one for tracking purposes
-            if not share_link:
-                share_token = self._generate_share_token(current_user_id, resource_id)
-                share_link = ShareLink(
-                    resource_type=self.resource_type.value,
-                    resource_id=resource_id,
-                    share_token=share_token,
-                    require_approval=True,
-                    default_permission_level=PermissionLevel.VIEW.value,
-                    expires_at=datetime.utcnow() + timedelta(days=365 * 100),
-                    created_by_user_id=current_user_id,
-                    is_active=True,
-                )
-                db.add(share_link)
-                db.flush()  # Get the share_link.id
-
             # Create new member with approved status
             member = ResourceMember(
                 resource_type=self.resource_type.value,
@@ -999,15 +999,145 @@ class UnifiedShareService(ABC):
             member.copied_resource_id = copied_resource_id
             db.commit()
 
-        # Get user names for response
+        # Build user map for response
         users = (
             db.query(User).filter(User.id.in_([target_user_id, current_user_id])).all()
         )
-        # LOGGING: Verify user_map contains email field
         user_map = {u.id: u for u in users}
         logger.info(f"[add_member] User map created with {len(user_map)} users")
 
         return self._member_to_response(member, user_map)
+
+    def batch_add_members(
+        self,
+        db: Session,
+        resource_id: int,
+        current_user_id: int,
+        members_data: List[Tuple[int, SchemaMemberRole]],
+    ) -> BatchResourceMemberResponse:
+        """Batch add multiple members to a resource in a single transaction.
+
+        Args:
+            db: Database session
+            resource_id: Resource ID
+            current_user_id: Current user performing the action
+            members_data: List of (target_user_id, role) tuples
+        """
+        # Validate resource and ownership/manage permission once
+        resource = self._get_resource(db, resource_id, current_user_id)
+        if not resource:
+            raise HTTPException(status_code=404, detail="Resource not found")
+
+        owner_id = self._get_resource_owner_id(resource)
+        has_manage = self.check_permission(
+            db, resource_id, current_user_id, SchemaPermissionLevel.MANAGE
+        )
+        if owner_id != current_user_id and not has_manage:
+            raise HTTPException(status_code=403, detail="No permission to add members")
+
+        # Obtain (or lazily create) the share link once, reused for all members
+        share_link = self._get_or_create_share_link(db, resource_id, current_user_id)
+
+        # Handle legacy resource_type format variants for existing member queries
+        resource_type_variants = [self.resource_type.value]
+        if self.resource_type.value == "KnowledgeBase":
+            resource_type_variants.append("KNOWLEDGE_BASE")
+
+        # Batch-query all target users and existing members
+        target_user_ids = [uid for uid, _ in members_data]
+        target_users = (
+            db.query(User)
+            .filter(User.id.in_(target_user_ids), User.is_active == True)
+            .all()
+        )
+        valid_user_map = {u.id: u for u in target_users}
+
+        existing_members = (
+            db.query(ResourceMember)
+            .filter(
+                ResourceMember.resource_type.in_(resource_type_variants),
+                ResourceMember.resource_id == resource_id,
+                ResourceMember.user_id.in_(target_user_ids),
+            )
+            .all()
+        )
+        existing_map = {m.user_id: m for m in existing_members}
+
+        succeeded: List[ResourceMember] = []
+        failed: List[dict] = []
+
+        for target_user_id, role in members_data:
+            # Skip self-add
+            if target_user_id == current_user_id:
+                failed.append(
+                    {"user_id": target_user_id, "error": "Cannot add yourself"}
+                )
+                continue
+
+            # Check user exists
+            if target_user_id not in valid_user_map:
+                failed.append(
+                    {"user_id": target_user_id, "error": "User not found or inactive"}
+                )
+                continue
+
+            existing = existing_map.get(target_user_id)
+            if existing:
+                if existing.status.lower() == MemberStatus.APPROVED.value.lower():
+                    failed.append(
+                        {
+                            "user_id": target_user_id,
+                            "error": "User already has access",
+                        }
+                    )
+                    continue
+
+                # Update existing pending/rejected record
+                if not existing.share_link_id:
+                    existing.share_link_id = share_link.id
+                existing.set_role(role.value)
+                existing.status = MemberStatus.APPROVED.value
+                existing.invited_by_user_id = current_user_id
+                existing.reviewed_by_user_id = current_user_id
+                existing.reviewed_at = datetime.utcnow()
+                existing.updated_at = datetime.utcnow()
+                succeeded.append(existing)
+            else:
+                # Create new member
+                member = ResourceMember(
+                    resource_type=self.resource_type.value,
+                    resource_id=resource_id,
+                    user_id=target_user_id,
+                    status=MemberStatus.APPROVED.value,
+                    invited_by_user_id=current_user_id,
+                    share_link_id=share_link.id,
+                    reviewed_by_user_id=current_user_id,
+                    reviewed_at=datetime.utcnow(),
+                    requested_at=datetime.utcnow(),
+                )
+                member.set_role(role.value)
+                db.add(member)
+                succeeded.append(member)
+
+        db.commit()
+
+        # Refresh and call approval hooks
+        for member in succeeded:
+            db.refresh(member)
+            copied_resource_id = self._on_member_approved(db, member, resource)
+            if copied_resource_id:
+                member.copied_resource_id = copied_resource_id
+                db.commit()
+
+        # Build user map for responses
+        all_user_ids = set(target_user_ids) | {current_user_id}
+        all_users = db.query(User).filter(User.id.in_(all_user_ids)).all()
+        user_map = {u.id: u for u in all_users}
+
+        return BatchResourceMemberResponse(
+            succeeded=[self._member_to_response(m, user_map) for m in succeeded],
+            failed=failed,
+        )
 
     def update_member(
         self,

@@ -418,6 +418,16 @@ export interface PermissionUpdateRequest {
   permission_level?: PermissionLevel
 }
 
+// Batch permission add types
+export interface BatchPermissionAddRequest {
+  members: { user_id: number; role: MemberRole }[]
+}
+
+export interface BatchPermissionAddResponse {
+  succeeded: PermissionResponse[]
+  failed: { user_id: number; error: string }[]
+}
+
 // Permission User Info types
 export interface PermissionUserInfo {
   id: number
@@ -566,10 +576,4 @@ export interface JoinByLinkResponse {
   resource_type: string
   resource_id: number
   copied_resource_id?: number
-}
-
-// Personal Knowledge Base Group (for grouped display)
-export interface PersonalKnowledgeBaseGroup {
-  created_by_me: KnowledgeBase[]
-  shared_with_me: KnowledgeBase[]
 }

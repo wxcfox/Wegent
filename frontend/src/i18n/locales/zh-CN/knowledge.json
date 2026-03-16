@@ -27,7 +27,6 @@
     "documents": "个文档",
     "noTeamHint": "您还没有加入任何团队。创建或加入团队后，可在此查看团队知识库。",
     "noGroupHint": "您还没有加入任何组。创建或加入组后，可在此查看组知识库。",
-    "manageGroups": "管理组",
     "searchGroups": "搜索组...",
     "noGroupResults": "没有匹配的组",
     "tabs": {
@@ -35,14 +34,6 @@
       "group": "组知识",
       "organization": "公司知识",
       "external": "外部知识库"
-    },
-    "personalGroups": {
-      "createdByMe": "我创建的",
-      "sharedWithMe": "分享给我的",
-      "noCreated": "您还没有创建任何知识库",
-      "noShared": "暂没有分享给您的知识库",
-      "createdDesc": "点击上方按钮创建您的第一个知识库",
-      "sharedDesc": "当其他用户分享知识库给您时，将显示在这里"
     },
     "noOrgKnowledgeBase": "暂无公司知识库",
     "noOrgKnowledgeBaseHint": "公司知识库由管理员创建和管理，所有成员可查看",
@@ -105,6 +96,8 @@
       "reindexSuccess": "已开始重新索引",
       "reindexFailed": "启动重新索引失败",
       "openLink": "打开链接",
+      "download": "下载",
+      "downloadFailed": "文件下载失败，请重试",
       "columns": {
         "name": "名称",
         "type": "类型",
@@ -325,6 +318,10 @@
       "searchUserPlaceholder": "搜索用户名或邮箱...",
       "selectUser": "请选择用户",
       "invalidUserName": "请输入有效的用户名",
+      "maxUsersExceeded": "最多同时添加 {{max}} 个用户",
+      "batchAddSuccess": "添加成功",
+      "batchAddFailed": "添加失败",
+      "batchAddPartialSuccess": "成功添加 {{succeeded}} 个用户，{{failed}} 个失败",
       "invalidShareLink": "分享链接无效或已过期",
       "noLinkToCopy": "没有可复制的链接",
       "copyFailedManual": "链接已选中，请按 Ctrl+C 复制"
