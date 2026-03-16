@@ -159,7 +159,7 @@ class BatchResourceMemberCreate(BaseModel):
     """Request body for batch adding members directly."""
 
     members: List[ResourceMemberCreate] = Field(
-        description="List of members to add", min_length=1, max_length=50
+        description="List of members to add", min_length=1, max_length=10
     )
 
 

@@ -22,7 +22,7 @@ import type { MemberRole, BatchPermissionAddResponse } from '@/types/knowledge'
 import type { SearchUser } from '@/types/api'
 
 /** Maximum number of users that can be added in a single batch */
-const MAX_BATCH_SIZE = 3
+const MAX_BATCH_SIZE = 10
 
 interface AddUserDialogProps {
   open: boolean
