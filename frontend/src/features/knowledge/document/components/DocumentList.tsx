@@ -719,7 +719,7 @@ export function DocumentList({
                     onMouseDown={handleNameResizeMouseDown}
                     onClick={e => e.stopPropagation()}
                   >
-                    <div className="w-0.5 h-3/4 rounded-full bg-transparent group-hover/resize:bg-primary/50 transition-colors" />
+                    <div className="w-0.5 h-3/4 rounded-full bg-border group-hover/resize:bg-primary/50 transition-colors" />
                   </div>
                 </div>
                 {/* Spacer to match DocumentItem middle area */}
