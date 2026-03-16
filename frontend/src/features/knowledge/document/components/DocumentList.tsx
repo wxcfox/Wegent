@@ -103,14 +103,11 @@ export function DocumentList({
 
   // Resizable name column width (normal table mode only)
   const {
-    width: nameColumnWidth,
+    widthOverride: nameColumnWidth,
     isResizing: isColumnResizing,
     handleMouseDown: handleNameResizeMouseDown,
-  } = useColumnResize({
-    defaultWidth: 300,
-    minWidth: 150,
-    maxWidth: 800,
-  })
+    columnRef: nameColumnRef,
+  } = useColumnResize()
 
   // Track component mounted state to prevent updates after unmount
   const isMountedRef = useRef(true)
@@ -706,8 +703,9 @@ export function DocumentList({
                 {/* Icon placeholder */}
                 <div className="w-8 flex-shrink-0" />
                 <div
-                  className="relative flex-shrink-0 cursor-pointer hover:text-text-primary select-none"
-                  style={{ width: `${nameColumnWidth}px` }}
+                  ref={nameColumnRef}
+                  className={`relative cursor-pointer hover:text-text-primary select-none ${nameColumnWidth ? 'flex-shrink-0' : 'flex-1 min-w-[120px]'}`}
+                  style={nameColumnWidth ? { width: `${nameColumnWidth}px` } : undefined}
                   onClick={() => handleSort('name')}
                 >
                   {t('document.document.columns.name')}

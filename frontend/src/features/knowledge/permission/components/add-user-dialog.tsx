@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import { UserPlus, CheckCircle2, XCircle } from 'lucide-react'
+import { UserPlus, XCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -130,34 +130,17 @@ export function AddUserDialog({ open, onOpenChange, kbId, onSuccess }: AddUserDi
         />
 
         {/* Batch result details — shown when partial failure occurs */}
-        {batchResult && (batchResult.succeeded.length > 0 || batchResult.failed.length > 0) && (
-          <div className="space-y-2 px-1">
-            {batchResult.succeeded.length > 0 && (
-              <div className="text-sm text-success bg-success/10 px-3 py-2 rounded-lg space-y-1">
-                {batchResult.succeeded.map(m => (
-                  <div key={m.user_id} className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>
-                      {userNameMap.get(m.user_id) || `User ${m.user_id}`}{' '}
-                      {t('document.permission.batchAddSuccess')}
-                    </span>
-                  </div>
-                ))}
+        {batchResult && batchResult.failed.length > 0 && (
+          <div className="text-sm text-error bg-error/10 px-3 py-2 rounded-lg space-y-1">
+            {batchResult.failed.map(f => (
+              <div key={f.user_id} className="flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>
+                  {userNameMap.get(f.user_id) || `User ${f.user_id}`}{' '}
+                  {t('document.permission.batchAddFailed')}: {f.error}
+                </span>
               </div>
-            )}
-            {batchResult.failed.length > 0 && (
-              <div className="text-sm text-error bg-error/10 px-3 py-2 rounded-lg space-y-1">
-                {batchResult.failed.map(f => (
-                  <div key={f.user_id} className="flex items-center gap-1.5">
-                    <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>
-                      {userNameMap.get(f.user_id) || `User ${f.user_id}`}{' '}
-                      {t('document.permission.batchAddFailed')}: {f.error}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         )}
 
