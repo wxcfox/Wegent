@@ -708,17 +708,19 @@ export function DocumentList({
                 <div className="w-8 flex-shrink-0" />
                 <div
                   className="relative flex-shrink-0 cursor-pointer hover:text-text-primary select-none"
-                  style={{ width: `${nameColumnWidth}px` }}
+                  style={{ width: `${nameColumnWidth}px`, marginRight: '-4px' , paddingRight: '16px' }}
                   onClick={() => handleSort('name')}
                 >
                   {t('document.document.columns.name')}
                   <SortIcon field="name" />
-                  {/* Column resize handle */}
+                  {/* Column resize handle - 12px wide hit area on right edge, visible line on hover */}
                   <div
-                    className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-10"
+                    className="absolute top-0 right-0 bottom-0 w-3 cursor-col-resize z-10 group/resize flex items-center justify-center"
                     onMouseDown={handleNameResizeMouseDown}
                     onClick={e => e.stopPropagation()}
-                  />
+                  >
+                    <div className="w-0.5 h-3/4 rounded-full bg-transparent group-hover/resize:bg-primary/50 transition-colors" />
+                  </div>
                 </div>
                 {/* Spacer to match DocumentItem middle area */}
                 <div className="w-48 flex-shrink-0" />

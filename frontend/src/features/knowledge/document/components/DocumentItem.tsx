@@ -333,7 +333,7 @@ export function DocumentItem({
       {/* File name */}
       <div
         className={`flex items-center gap-2 ${nameColumnWidth ? 'flex-shrink-0' : 'flex-1 min-w-[120px]'}`}
-        style={nameColumnWidth ? { width: `${nameColumnWidth}px` } : undefined}
+        style={nameColumnWidth ? { width: `${nameColumnWidth}px`, marginRight: '-4px', paddingRight: '16px' } : undefined}
       >
         <span className="text-sm font-medium text-text-primary truncate">{displayName}</span>
         {sourceUrl && (
