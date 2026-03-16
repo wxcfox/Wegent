@@ -317,6 +317,9 @@
       "searchUserPlaceholder": "搜索用户名或邮箱...",
       "selectUser": "请选择用户",
       "invalidUserName": "请输入有效的用户名",
+      "maxUsersExceeded": "最多同时添加 {{max}} 个用户",
+      "batchAddSuccess": "添加成功",
+      "batchAddFailed": "添加失败",
       "invalidShareLink": "分享链接无效或已过期",
       "noLinkToCopy": "没有可复制的链接",
       "copyFailedManual": "链接已选中，请按 Ctrl+C 复制"

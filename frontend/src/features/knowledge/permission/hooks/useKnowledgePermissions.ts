@@ -192,11 +192,6 @@ export function useKnowledgePermissions({
         })
         // Refresh permissions after batch adding
         await fetchPermissions()
-        // Report partial failures if any
-        if (result.failed.length > 0) {
-          const failedMsg = result.failed.map(f => f.error).join('; ')
-          setError(failedMsg)
-        }
         return result
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to batch add permissions'
