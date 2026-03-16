@@ -418,6 +418,16 @@ export interface PermissionUpdateRequest {
   permission_level?: PermissionLevel
 }
 
+// Batch permission add types
+export interface BatchPermissionAddRequest {
+  members: { user_id: number; role: MemberRole }[]
+}
+
+export interface BatchPermissionAddResponse {
+  succeeded: PermissionResponse[]
+  failed: { user_id: number; error: string }[]
+}
+
 // Permission User Info types
 export interface PermissionUserInfo {
   id: number

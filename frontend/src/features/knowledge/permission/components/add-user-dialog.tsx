@@ -34,7 +34,7 @@ export function AddUserDialog({ open, onOpenChange, kbId, onSuccess }: AddUserDi
   const [role, setRole] = useState<MemberRole>('Reporter')
   const [localError, setLocalError] = useState<string | null>(null)
 
-  const { addPermission, loading, error } = useKnowledgePermissions({ kbId })
+  const { batchAddPermission, loading, error } = useKnowledgePermissions({ kbId })
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault()
@@ -52,9 +52,8 @@ export function AddUserDialog({ open, onOpenChange, kbId, onSuccess }: AddUserDi
     }
 
     try {
-      for (const user of validUsers) {
-        await addPermission(user.user_name, role)
-      }
+      const members = validUsers.map(u => ({ user_id: u.id, role }))
+      await batchAddPermission(members)
       onSuccess?.()
       onOpenChange(false)
       // Reset form

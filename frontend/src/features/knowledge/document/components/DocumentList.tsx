@@ -107,7 +107,6 @@ export function DocumentList({
     isResizing: isColumnResizing,
     handleMouseDown: handleNameResizeMouseDown,
   } = useColumnResize({
-    storageKey: 'kb-document-name-column-width',
     defaultWidth: 300,
     minWidth: 150,
     maxWidth: 800,
@@ -708,7 +707,7 @@ export function DocumentList({
                 <div className="w-8 flex-shrink-0" />
                 <div
                   className="relative flex-shrink-0 cursor-pointer hover:text-text-primary select-none"
-                  style={{ width: `${nameColumnWidth}px`, marginRight: '-4px', paddingRight: '16px' }}
+                  style={{ width: `${nameColumnWidth}px` }}
                   onClick={() => handleSort('name')}
                 >
                   {t('document.document.columns.name')}
