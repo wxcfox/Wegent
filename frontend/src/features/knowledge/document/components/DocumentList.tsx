@@ -36,6 +36,7 @@ import { EditDocumentDialog } from './EditDocumentDialog'
 import { RetrievalTestDialog } from './RetrievalTestDialog'
 import { ConvertKnowledgeBaseTypeDialog } from './ConvertKnowledgeBaseTypeDialog'
 import { useDocuments } from '../hooks/useDocuments'
+import { useColumnResize } from '../hooks/useColumnResize'
 import { refreshKnowledgeBaseSummary } from '@/apis/knowledge'
 import { toast } from '@/hooks/use-toast'
 import type { KnowledgeBase, KnowledgeDocument, SplitterConfig } from '@/types/knowledge'
@@ -99,6 +100,18 @@ export function DocumentList({
   const [reindexingDocId, setReindexingDocId] = useState<number | null>(null)
   // Track if summary is being retried
   const [isSummaryRetrying, setIsSummaryRetrying] = useState(false)
+
+  // Resizable name column width (normal table mode only)
+  const {
+    width: nameColumnWidth,
+    isResizing: isColumnResizing,
+    handleMouseDown: handleNameResizeMouseDown,
+  } = useColumnResize({
+    storageKey: 'kb-document-name-column-width',
+    defaultWidth: 300,
+    minWidth: 150,
+    maxWidth: 800,
+  })
 
   // Track component mounted state to prevent updates after unmount
   const isMountedRef = useRef(true)
@@ -694,11 +707,18 @@ export function DocumentList({
                 {/* Icon placeholder */}
                 <div className="w-8 flex-shrink-0" />
                 <div
-                  className="flex-1 min-w-[120px] cursor-pointer hover:text-text-primary select-none"
+                  className="relative flex-shrink-0 cursor-pointer hover:text-text-primary select-none"
+                  style={{ width: `${nameColumnWidth}px` }}
                   onClick={() => handleSort('name')}
                 >
                   {t('document.document.columns.name')}
                   <SortIcon field="name" />
+                  {/* Column resize handle */}
+                  <div
+                    className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-10"
+                    onMouseDown={handleNameResizeMouseDown}
+                    onClick={e => e.stopPropagation()}
+                  />
                 </div>
                 {/* Spacer to match DocumentItem middle area */}
                 <div className="w-48 flex-shrink-0" />
@@ -723,7 +743,7 @@ export function DocumentList({
                   {t('document.document.columns.indexStatus')}
                 </div>
                 {canManage && (
-                  <div className="w-16 flex-shrink-0 text-center">
+                  <div className="w-20 flex-shrink-0 text-center">
                     {t('document.document.columns.actions')}
                   </div>
                 )}
@@ -745,9 +765,14 @@ export function DocumentList({
                   selected={selectedIds.has(doc.id)}
                   onSelect={handleSelectDoc}
                   ragConfigured={ragConfigured}
+                  nameColumnWidth={nameColumnWidth}
                 />
               ))}
             </div>
+          )}
+          {/* Overlay during column resize to prevent pointer event interference */}
+          {isColumnResizing && (
+            <div className="fixed inset-0 z-50" style={{ cursor: 'col-resize' }} />
           )}
         </>
       ) : searchQuery ? (
