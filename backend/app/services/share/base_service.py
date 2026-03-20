@@ -97,6 +97,22 @@ class UnifiedShareService(ABC):
         """
         pass
 
+    def _resource_exists(self, db: Session, resource_id: int) -> bool:
+        """
+        Check if the resource exists regardless of user access.
+
+        Used to differentiate 404 (resource not found) from 403 (no permission).
+        Subclasses should override this to perform the actual existence check.
+
+        Args:
+            db: Database session
+            resource_id: Resource ID
+
+        Returns:
+            True if the resource exists, False otherwise
+        """
+        return True
+
     @abstractmethod
     def _get_resource_name(self, resource: object) -> str:
         """Get display name for the resource."""
@@ -1005,6 +1021,11 @@ class UnifiedShareService(ABC):
         # Validate resource and ownership/manage permission once
         resource = self._get_resource(db, resource_id, current_user_id)
         if not resource:
+            # Distinguish 404 (resource not found) from 403 (user has no access)
+            if self._resource_exists(db, resource_id):
+                raise HTTPException(
+                    status_code=403, detail="No permission to add members"
+                )
             raise HTTPException(status_code=404, detail="Resource not found")
 
         owner_id = self._get_resource_owner_id(resource)

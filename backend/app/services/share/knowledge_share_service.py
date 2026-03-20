@@ -177,6 +177,19 @@ class KnowledgeShareService(UnifiedShareService):
         )
         return None  # Only return KB for authorized users
 
+    def _resource_exists(self, db: Session, resource_id: int) -> bool:
+        """Check if the KnowledgeBase exists regardless of user access."""
+        return (
+            db.query(Kind.id)
+            .filter(
+                Kind.id == resource_id,
+                Kind.kind == "KnowledgeBase",
+                Kind.is_active == True,
+            )
+            .first()
+            is not None
+        )
+
     def _get_resource_name(self, resource: Kind) -> str:
         """Get KnowledgeBase display name."""
         return resource.name
