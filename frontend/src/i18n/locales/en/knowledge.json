@@ -110,6 +110,7 @@
       "reindexSuccess": "Reindex started",
       "reindexFailed": "Failed to start reindex",
       "openLink": "Open Link",
+      "download": "Download",
       "columns": {
         "name": "Name",
         "type": "Type",
@@ -332,6 +333,9 @@
       "searchUserPlaceholder": "Search username or email...",
       "selectUser": "Please select a user",
       "invalidUserName": "Please enter a valid username",
+      "maxUsersExceeded": "Maximum {{max}} users can be added at once",
+      "batchAddSuccess": "added successfully",
+      "batchAddFailed": "failed to add",
       "invalidShareLink": "Share link is invalid or expired",
       "noLinkToCopy": "No link to copy",
       "copyFailedManual": "Link selected. Press Ctrl+C to copy."
