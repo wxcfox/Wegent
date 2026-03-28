@@ -46,6 +46,8 @@ interface DocumentItemProps {
   isReindexing?: boolean
   /** Whether the knowledge base has RAG configured (retriever + embedding model) */
   ragConfigured?: boolean
+  /** Width of the name column in pixels (for table mode column resize) */
+  nameColumnWidth?: number
 }
 
 export function DocumentItem({
@@ -63,6 +65,7 @@ export function DocumentItem({
   isRefreshing = false,
   isReindexing = false,
   ragConfigured = true,
+  nameColumnWidth,
 }: DocumentItemProps) {
   const { t } = useTranslation()
 
@@ -328,7 +331,10 @@ export function DocumentItem({
       </div>
 
       {/* File name */}
-      <div className="flex-1 min-w-[120px] flex items-center gap-2">
+      <div
+        className={`flex items-center gap-2 ${nameColumnWidth ? 'flex-shrink-0' : 'flex-1 min-w-[120px]'}`}
+        style={nameColumnWidth ? { width: `${nameColumnWidth}px`, marginRight: '-4px', paddingRight: '16px' } : undefined}
+      >
         <span className="text-sm font-medium text-text-primary truncate">{displayName}</span>
         {sourceUrl && (
           <button
